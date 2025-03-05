@@ -1,0 +1,34 @@
+import requests
+
+class SynapseConnection:
+    def __init__(self, tenant_id, client_id, client_secret, synapse_server, database):
+        self.tenant_id = tenant_id
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.synapse_server = synapse_server
+        self.database = database
+        self.access_token = self.get_access_token()
+
+    def get_access_token(self):
+        """Fetches Azure AD token using Service Principal."""
+        token_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/token"
+        token_data = {
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "resource": "https://database.windows.net/"
+        }
+        response = requests.post(token_url, data=token_data)
+        response.raise_for_status()  # Raise an error if request fails
+        return response.json().get("access_token")
+
+    def get_jdbc_url(self):
+        """Constructs the JDBC URL for Azure Synapse."""
+        return f"jdbc:sqlserver://{self.synapse_server}.sql.azuresynapse.net:1433;database={self.database};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.sql.azuresynapse.net;loginTimeout=30"
+
+    def get_connection_properties(self):
+        """Returns JDBC connection properties with Access Token."""
+        return {
+            "accessToken": self.access_token,
+            "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+        }
